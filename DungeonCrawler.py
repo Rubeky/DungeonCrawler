@@ -3,47 +3,64 @@
 
 #Initialising pygame library
 import pygame
-import time
+import os
+
+print(os.getcwd())
 
 ###############################################################################
 ###############################################################################
 
 class Game:
-    #Setting up drawing window
-    pygame.init()
-    screen = pygame.display.set_mode([900, 900])
-    pygame.display.set_caption("Dungeon Crawler")
+    walking = [[]]
 
 ###############################################################################
 
     def __init__(self):
 
         self.main()
-        pass
 
 ###############################################################################
 
     def main(self):
 
+        pygame.init()
+        screen = pygame.display.set_mode([1024, 1024])
+        pygame.display.set_caption("Dungeon Crawler")
+        screen.fill((255, 255, 255))
+
+
+        self.walking = [\
+        [pygame.image.load('Images/Up1.png'), pygame.image.load('Images/Up2.png'), pygame.image.load('Images/Up3.png'), pygame.image.load('Images/Up4.png')],\
+        [pygame.image.load('Images/Left1.png'), pygame.image.load('Images/Left2.png'), pygame.image.load('Images/Left3.png'), pygame.image.load('Images/Left4.png')],\
+        [pygame.image.load('Images/Down1.png'), pygame.image.load('Images/Down2.png'), pygame.image.load('Images/Down3.png'), pygame.image.load('Images/Down4.png')],\
+        [pygame.image.load('Images/Right1.png'), pygame.image.load('Images/Right2.png'), pygame.image.load('Images/Right3.png'), pygame.image.load('Images/Right4.png')]\
+        ]
+
+        for i in range(0,4):
+            for j in range(0,4):
+                self.walking[i][j] = pygame.transform.scale(self.walking[i][j], (64, 64))
+
         running = True
+        gameUpdated = False
         tile_grid =  [["Empty"]*10 for _ in range(10)]
         obstacle_grid = [["None"]*10 for _ in range(10)]
 
         self.generateDungeon(tile_grid, obstacle_grid)
 
         #Player attributes
-        player_x = 5
-        player_y = 5
+        player_position = [160, 160] #Relative to top corner of board, in "pixels"
         player_health = 10
         player_direction = ""
         player_score = 0
         items_list = ""
 
 
+        pygame.display.update()
+
         #Gameloop
         while running:
 
-            time.sleep(0.1)
+            pygame.time.delay(50)
             #Checking for events
             for event in pygame.event.get():
                 #Exit code if window closed
@@ -53,95 +70,99 @@ class Game:
                 #Movement from WASD, checks from last event and uses that
                 #Should implement a stack so you can do multiple moves
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_a:
-                        player_direction = "a"
-                    if event.key == pygame.K_d:
-                        player_direction = "d"
                     if event.key == pygame.K_w:
-                        player_direction = "w"
+                        player_direction = 0
+                        gameUpdated = True
+                    if event.key == pygame.K_a:
+                        player_direction = 1
+                        gameUpdated = True
                     if event.key == pygame.K_s:
-                        player_direction = "s"
+                        player_direction = 2
+                        gameUpdated = True
+                    if event.key == pygame.K_d:
+                        player_direction = 3
+                        gameUpdated = True
 
                     if event.key == pygame.K_SPACE:
-                        obstacle_grid = self.breakBlock(player_x, player_y, player_direction, obstacle_grid)
+                        obstacle_grid = self.breakBlock(player_position, player_direction, obstacle_grid)
+                        gameUpdated = True
 
-            ##Printing layers##
-            #Background - Not sure if needed, maybe black?
-            self.screen.fill((0, 0, 0))
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
 
-            #Tiles and walls, setting up collisions?
-            for i in range(0, 9):
-                for j in range(0, 9):
-                    #Draw each tile
-                    #Draw each wall
-                    pass
+            if gameUpdated:
+                #Populates screen
+                player_position, player_health = self.drawMovement(player_position, player_direction, tile_grid, obstacle_grid, screen, player_health, items_list)
+                player_direction = ""
 
-            #Player - Movement of player
-            player_x, player_y, player_health = self.playerMove(player_x, player_y, player_direction, player_health, obstacle_grid)
-            player_direction = ""
 
-            #Filter? For lighting
-            #Image of a circle with feathered edges for lighting
+                gameUpdated = False
 
-            #UI
-            self.drawUI(player_health, items_list)
+            pygame.display.update()
 
         pygame.quit()
 
 
 ###############################################################################
+    '''
+    generateDungeon(self, tile_grid, obstacle_grid)
+     - floor tile array - - ^
+     - obstacles in dungeon - - - - - - - ^
 
+      - This function takes in the grids for floor tiles and obstacles
+      - (initialised as empty) and fills them randomly with reasonable
+      - obstacles for the player to overcome (ideally)
+      - Passed out of this function by reference are:
+      - tile_grid
+      - obstacle_grid
+    '''
     def generateDungeon(self, tile_grid, obstacle_grid):
         #Randomise tile_grid to be a nice background
-        #Generate obstacle_grid using a turtle? maybe using a maze generator
+        #Generate obstacle_grid using premade tile sequences
         pass
 
 ###############################################################################
 
-    def playerMove(self, player_x, player_y, player_direction, player_health, obstacle_grid):
+    '''
+    drawMovement(self, player_position, player_direction)
+     - player coordinates - ^
+     - which direction is intended - - - - - ^
 
-        if player_direction == "a":
-            response = self.playerMovementCheck(player_x, player_y, "a", obstacle_grid)
-            if response == 1:
-                player_x -= 1
-            elif response == 2:
-                player_x -= 1
-                player_health -= 1
-            elif response == 3:
-                self.deathMessage()
+     - This function draws the walking animation between blocks
+    '''
+    def drawMovement(self, player_position, player_direction, tile_grid, obstacle_grid, screen, player_health, items_list):
 
-        elif player_direction == "d":
-            response = self.playerMovementCheck(player_x, player_y, "d", obstacle_grid)
-            if response == 1:
-                player_x -= 1
-            elif response == 2:
-                player_x -= 1
-                player_health -= 1
-            elif response == 3:
-                self.deathMessage()
+        response = self.playerMovementCheck(player_position, player_direction, obstacle_grid)
+        if response == 3:
+            self.deathMessage()
+        elif response == 2:
+            player_health -= 1
 
-        elif player_direction == "w":
-            response = self.playerMovementCheck(player_x, player_y, "w", obstacle_grid)
-            if response == 1:
-                player_x -= 1
-            elif response == 2:
-                player_x -= 1
-                player_health -= 1
-            elif response == 3:
-                self.deathMessage()
-
-        elif player_direction == "s":
-            response = self.playerMovementCheck(player_x, player_y, "s", obstacle_grid)
-            if response == 1:
-                player_x -= 1
-            elif response == 2:
-                player_x -= 1
-                player_health -= 1
-            elif response == 3:
-                self.deathMessage()
+        for i in range(0, 16):
+            pygame.time.delay(100)
+            #Background
+            screen.fill((255, 255, 255))
+            self.drawToScreen(player_position, tile_grid, obstacle_grid)
+            #Character
+            screen.blit(self.walking[player_direction][i%4], [480, 480])
+            #UI
+            self.drawUI(player_health, items_list)
+            #Updates it all
+            pygame.display.update()
 
 
-        return player_x, player_y, player_health
+        return player_position, player_health
+
+###############################################################################
+
+    def drawToScreen(self, player_position, tile_grid, obstacle_grid):
+        #Find where the tiles start relative to the screen
+        tile_pos = [480 - player_position[0], 480 - player_position[1]]
+        for i in range(0, 16):
+            for j in range(0,16):
+                #Draw tiles at position (tile_pos + 64*distance)
+                #Draw walls/objects
+
         pass
 
 ###############################################################################
@@ -155,11 +176,10 @@ class Game:
 ###############################################################################
 
     '''
-    playerMovementCheck(self, player_x, player_y, player_direction, obstacle_grid)
-     - player x-coordinate - - - ^
-     - player y-coordinate - - - - - - - - ^
-     - which direction is intended - - - - - - - - - - - ^
-     - the obstacle grid passed in from main - - - - - - - - - - - - - - ^
+    playerMovementCheck(self, player_position, player_direction, obstacle_grid)
+     - player coordinates - - - - - ^
+     - which direction is intended - - - - - - - - ^
+     - the obstacle grid passed in from main - - - - - - - - - - - - ^
 
      - This function takes inputs and checks if a player movement is valid
      - Possible returns:
@@ -167,14 +187,15 @@ class Game:
      1: Movement is fine
      2: Movement is fine but 1 damage should be taken
      3: Instant death (such as a spike pit)
+     4: Box to push ## TODO:
     '''
-    def playerMovementCheck(self, player_x, player_y, player_direction, obstacle_grid):
+    def playerMovementCheck(self, player_position, player_direction, obstacle_grid):
         #Check for "wall", "pit", "cracked wall",
         pass
 
 ###############################################################################
 
-    def breakBlock(self, player_x, player_y, player_direction, obstacle_grid):
+    def breakBlock(self, player_position, player_direction, obstacle_grid):
         #Check for "cracked_wall", break it
         return obstacle_grid
 

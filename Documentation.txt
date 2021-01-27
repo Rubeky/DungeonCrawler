@@ -1,0 +1,40 @@
+Gameplay rules:
+-	Game blocks are made up of tiles, which are 100 pixels by 100 pixels which can be moved on
+-	Combat:
+		Sword hits 3 blocks in front of player
+		Staff hit 3 blocks ahead in straight line
+		Pickaxe only affects specific wall, straight ahead
+-	UI:
+		Items in inventory are shown (so far, sword, staff, pickaxe)
+		Health bar (Solid bar, percentage of it filled because hearts would be like Minecraft)
+-	Walls and obstacles are stored in the same layer as strings
+-	Background moves, player doesn’t, though player has walking animation
+-	There is a vision ring around the player in a circle, so further away items are not visible on screen, though sounds will be added later in development
+-	Game consists of player making their way through a set of randomly selected premade rooms (stored in json format?)
+-	Interactions with the environment include:
+		Walking into spikes, takes damage
+		Falling into spike pit, instant death, falling animation?
+		Walking into wall, nothing happens, no in-game time passes
+		Walking in straight line, walking animation
+		Pickaxe: breaking cracked wall
+		Sword: swipe in front of player, damages enemies, breaks breakable items
+		Staff: fires projectile ahead, passes through enemies, damaging them, also breaks cracked walls and breakable items (you get this item later)
+- All movements are to be done in "pixels", where each pixel is actually 16 pixels (4x4) on screen
+
+
+
+TODO:
+	- Make/Find images for game, all of which are either on a slight angle, or top-down
+		- Player, tiles(5), walls(3), pit trap(2), pots(3), coins(1), enemies(2), circle of vision(2 sizes)
+
+	- Make/find sounds for the game, all of which are somewhat muffled except the endgame stuff?
+	 	- Walking, ambient noises (muffled thudding, crumbling sounds, landslides?), sword swiping,
+			staff firing fireball, pickaxe mining, exit door opening?
+
+	- Come up with some aspect of mythology for future?
+		- Maybe lovecraftian-esque story?
+
+	- Level segment design, and how to load that into the game
+
+	- Some puzzle aspect, but only in quite a light way
+		- Box pushing, lighting torches, a way out of each level??
