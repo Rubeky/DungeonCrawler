@@ -4,6 +4,7 @@
 #Initialising pygame library
 import pygame
 import random
+import csv
 
 ###############################################################################
 ###############################################################################
@@ -11,7 +12,7 @@ import random
 class Game:
     walking = [[None]*4 for _ in range(4)]
     tiles = [None]*4
-    '''Obstacle types
+    '''
     0 - Nothing
     1 - Wall1
     2 - Wall2
@@ -24,12 +25,12 @@ class Game:
     9 - Void hole
     '''
     obstacles = [0]*10
+    obstacle_types = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     shadow = None
 
 ###############################################################################
 
     def __init__(self):
-
         self.main()
 
 ###############################################################################
@@ -41,43 +42,16 @@ class Game:
         pygame.display.set_caption("Dungeon Crawler")
         screen.fill((255, 255, 255))
 
-        walking = [None]*4
-        walking[0] = pygame.image.load('Images/Up.png')
-        walking[1] = pygame.image.load('Images/Left.png')
-        walking[2] = pygame.image.load('Images/Down.png')
+        self.setupVariables()
 
-        for i in range(4):
-            self.walking[0][i] = walking[0].subsurface((0 + i*16, 0, 16, 16))
-            self.walking[1][i] = walking[1].subsurface((0 + i*16, 0, 16, 16))
-            self.walking[2][i] = walking[2].subsurface((0 + i*16, 0, 16, 16))
-            self.walking[3][i] = pygame.transform.flip(self.walking[1][i], True, False)
-
-
-        tile_sheet = pygame.image.load('Images/Tiles.png')
-        #TODO: Choose better tiles
-        self.tiles[0] = tile_sheet.subsurface((17 * 17, 17 * 12, 16, 16))
-        self.tiles[1] = tile_sheet.subsurface((17 * 18, 17 * 12, 16, 16))
-        self.tiles[2] = tile_sheet.subsurface((17 * 17, 17 * 13, 16, 16))
-        self.tiles[3] = tile_sheet.subsurface((17 * 18, 17 * 13, 16, 16))
-
-        self.obstacles[0] = tile_sheet.subsurface((17 * 0, 17 * 2, 16, 16))
-        self.obstacles[1] = tile_sheet.subsurface((17 * 1, 17 * 2, 16, 16))
-        self.obstacles[2] = tile_sheet.subsurface((17 * 2, 17 * 2, 16, 16))
-        self.obstacles[3] = tile_sheet.subsurface((17 * 3, 17 * 2, 16, 16))
-
-        self.shadow = pygame.image.load('Images/Shadow.png')
-
-        #Scaling all the tiles and assets loaded in
-        for i in range(0,4):
-            self.tiles[i] = pygame.transform.scale(self.tiles[i], (64, 64))
-            self.obstacles[i] = pygame.transform.scale(self.obstacles[i], (64, 64))
-            for j in range(0,4):
-                self.walking[i][j] = pygame.transform.scale(self.walking[i][j], (64, 64))
-
+        #Game-state variables
         running = True
         gameUpdated = False
-        tile_grid =  [["None"]*16 for _ in range(16)]
+
+        #Board attributes
+        tile_grid = [["None"]*16 for _ in range(16)]
         obstacle_grid = [["None"]*16 for _ in range(16)]
+        obstacle_type = [["None"]*16 for _ in range(16)]
 
         #Player attributes
         player_position = [3, 3] #Relative to bottom corner in blocks, 0-indexing
@@ -86,7 +60,7 @@ class Game:
         player_score = 0
         items_list = ["", "", "", ""]
 
-        self.generateDungeon(tile_grid, obstacle_grid)
+        self.generateDungeon(tile_grid, obstacle_grid, obstacle_type)
         #Drawing initial frame:
         self.drawStart(player_position, tile_grid, obstacle_grid, screen)
 
@@ -124,8 +98,32 @@ class Game:
                         running = False
 
             if gameUpdated:
+
+                response = self.playerMovementCheck(player_position, player_direction, obstacle_type)
+                if response == 3:
+                    self.deathMessage()
+                elif response == 2:
+                    player_health -= 1
+
                 #Populates screen
-                player_position, player_health = self.showScreen(player_position, player_direction, tile_grid, obstacle_grid, screen, player_health, items_list)
+                for i in range(0, 64):
+
+                    pygame.time.delay(3)
+                    #Background
+                    screen.fill((0, 0, 0))
+
+                    player_position = self.moveCharacter(player_position, player_direction, screen)
+
+                    self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
+                    #Character
+                    screen.blit(self.walking[player_direction][int(i/8)%4], [480, 480])
+                    #Shadow
+                    screen.blit(self.shadow, [0, 0])
+                    #UI
+                    self.drawUI(player_health, items_list)
+                    #Updates it all
+                    pygame.display.update()
+
                 player_direction = ""
 
 
@@ -133,44 +131,80 @@ class Game:
 
         pygame.quit()
 
+###############################################################################
+
+    def setupVariables(self):
+        walking = [None]*4
+        walking[0] = pygame.image.load('Images/Up.png')
+        walking[1] = pygame.image.load('Images/Left.png')
+        walking[2] = pygame.image.load('Images/Down.png')
+
+        for i in range(4):
+            self.walking[0][i] = walking[0].subsurface((0 + i*16, 0, 16, 16))
+            self.walking[1][i] = walking[1].subsurface((0 + i*16, 0, 16, 16))
+            self.walking[2][i] = walking[2].subsurface((0 + i*16, 0, 16, 16))
+            self.walking[3][i] = pygame.transform.flip(self.walking[1][i], True, False)
+
+
+        tile_sheet = pygame.image.load('Images/Tiles.png')
+        #TODO: Choose better tiles
+        self.tiles[0] = tile_sheet.subsurface((17 * 17, 17 * 12, 16, 16))
+        self.tiles[1] = tile_sheet.subsurface((17 * 18, 17 * 12, 16, 16))
+        self.tiles[2] = tile_sheet.subsurface((17 * 17, 17 * 13, 16, 16))
+        self.tiles[3] = tile_sheet.subsurface((17 * 18, 17 * 13, 16, 16))
+
+        self.obstacles[0] = tile_sheet.subsurface((17 * 7, 17 * 0, 16, 16))
+        self.obstacles[1] = tile_sheet.subsurface((17 * 1, 17 * 5, 16, 16))
+        self.obstacles[2] = tile_sheet.subsurface((17 * 2, 17 * 5, 16, 16))
+        self.obstacles[3] = tile_sheet.subsurface((17 * 3, 17 * 5, 16, 16))
+
+        self.shadow = pygame.image.load('Images/Shadow.png')
+
+        #Scaling all the tiles and assets loaded in
+        for i in range(0,4):
+            self.tiles[i] = pygame.transform.scale(self.tiles[i], (64, 64))
+            self.obstacles[i] = pygame.transform.scale(self.obstacles[i], (64, 64))
+            for j in range(0,4):
+                self.walking[i][j] = pygame.transform.scale(self.walking[i][j], (64, 64))
 
 ###############################################################################
-    '''
-    generateDungeon(self, tile_grid, obstacle_grid)
-     - floor tile array - - ^
-     - obstacles in dungeon - - - - - - - ^
 
-      - This function takes in the grids for floor tiles and obstacles
-      - (initialised as empty) and fills them randomly with reasonable
-      - obstacles for the player to overcome (ideally)
-      - Passed out of this function by reference are:
-      - tile_grid
-      - obstacle_grid
-    '''
-    def generateDungeon(self, tile_grid, obstacle_grid):
+    def generateDungeon(self, tile_grid, obstacle_grid, obstacle_type):
+        '''
+        generateDungeon(self, tile_grid, obstacle_grid)
+         - floor tile array - - ^
+         - obstacles in dungeon - - - - - - - ^
+
+          - This function takes in the grids for floor tiles and obstacles
+          - (initialised as empty) and fills them randomly with reasonable
+          - obstacles for the player to overcome (ideally)
+          - Passed out of this function by reference are:
+          - tile_grid
+          - obstacle_grid
+        '''
+
         #Randomise tile_grid to be a nice background
         for i in range(0, 16):
             for j in range(0, 16):
                 randomNumber = random.randint(0,3)
                 tile_grid[i][j] = self.tiles[randomNumber]
 
-                randomNumber = random.randint(0,9)
-                if randomNumber < 4:
-                    obstacle_grid[i][j] = self.obstacles[randomNumber]
-
         #Generate obstacle_grid using premade tile sequences
-        '''for x in range(0, 4):
+        data = list(csv.reader(open("World chunks/Basic.csv")))
+
+        for x in range(0, 4):
             for y in range(0, 4):
-                for i in range(0, 4):
-                    for j in range(0, 4):
-                        pass'''
+                #Note, has to be y,x due to way that csv file is read in
+                temp = int(data[y][x])
+                obstacle_grid[x][y] = self.obstacles[temp]
+                obstacle_type[x][y] = temp
 
 ###############################################################################
 
-    '''
-     - drawStart just draws the initial frame of the game, no movement needed
-    '''
     def drawStart(self, player_position, tile_grid, obstacle_grid, screen):
+        '''
+        drawStart just draws the initial frame of the game, no movement needed
+        '''
 
         screen.fill((0, 0, 0))
         self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
@@ -183,51 +217,25 @@ class Game:
 
 ###############################################################################
 
-    '''
-    drawMovement(self, player_position, player_direction)
-     - player coordinates - ^
-     - which direction is intended - - - - - ^
+    def moveCharacter(self, player_position, player_direction, screen):
+        '''
+        drawMovement(self, player_position, player_direction)
+         - player coordinates - ^
+         - which direction is intended - - - - - ^
 
-     - This function draws the walking animation between blocks
-    '''
-    def showScreen(self, player_position, player_direction, tile_grid, obstacle_grid, screen, player_health, items_list):
+         - This function draws the walking animation between blocks
+        '''
 
-        response = self.playerMovementCheck(player_position, player_direction, obstacle_grid)
-        if response == 3:
-            self.deathMessage()
-        elif response == 2:
-            player_health -= 1
+        if player_direction == 0:
+            player_position[1] += 1/64
+        if player_direction == 1:
+            player_position[0] -= 1/64
+        if player_direction == 2:
+            player_position[1] -= 1/64
+        if player_direction == 3:
+            player_position[0] += 1/64
 
-        for i in range(0, 64):
-            pygame.time.delay(3)
-            #Background
-            screen.fill((0, 0, 0))
-
-            if player_direction == 0:
-                player_position[1] += 1/64
-            if player_direction == 1:
-                player_position[0] -= 1/64
-            if player_direction == 2:
-                player_position[1] -= 1/64
-            if player_direction == 3:
-                player_position[0] += 1/64
-
-            self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
-            #Character
-            if player_direction == -1:
-                screen.blit(self.walking[2][1], [480, 480])
-            else:
-                screen.blit(self.walking[player_direction][int(i/8)%4], [480, 480])
-            #Shadow
-            screen.blit(self.shadow, [0, 0])
-            #UI
-            self.drawUI(player_health, items_list)
-            #Updates it all
-            pygame.display.update()
-
-
-
-        return player_position, player_health
+        return player_position
 
 ###############################################################################
 
@@ -237,7 +245,8 @@ class Game:
             for j in range(0, 16):
                 drawing_x = 480 - 64*player_position[0] + 64*i
                 drawing_y = 512 + 64*player_position[1] - 64*j
-                screen.blit(tile_grid[i][j], (drawing_x, drawing_y))
+                if tile_grid[i][j] != None:
+                    screen.blit(tile_grid[i][j], (drawing_x, drawing_y))
                 if obstacle_grid[i][j] != "None":
                     screen.blit(obstacle_grid[i][j], (drawing_x, drawing_y))
                 pass
@@ -246,30 +255,44 @@ class Game:
 ###############################################################################
 
     def drawUI(self, player_health, items_list):
-        #Draw healthbar
+        #Draw healthbar, check if empty, if yes, self.deathMessage()
         #Draw Taskbar image
         #Draw items in "Taskbar"
         pass
 
 ###############################################################################
 
-    '''
-    playerMovementCheck(self, player_position, player_direction, obstacle_grid)
-     - player coordinates - - - - - ^
-     - which direction is intended - - - - - - - - ^
-     - the obstacle grid passed in from main - - - - - - - - - - - - ^
-
-     - This function takes inputs and checks if a player movement is valid
-     - Possible returns:
-     0: No, wall is blocking your way
-     1: Movement is fine
-     2: Movement is fine but 1 damage should be taken
-     3: Instant death (such as a spike pit)
-     4: Box to push ## TODO:
-    '''
     def playerMovementCheck(self, player_position, player_direction, obstacle_grid):
+        '''
+        playerMovementCheck(self, player_position, player_direction, obstacle_grid)
+         - player coordinates - - - - - ^
+         - which direction is intended - - - - - - - - ^
+         - the obstacle grid passed in from main - - - - - - - - - - - - ^
+
+         - This function takes inputs and checks if a player movement is valid
+         - Possible returns:
+         0: No, wall is blocking your way
+         1: Movement is fine
+         2: Movement is fine but 1 damage should be taken
+         3: Instant death (such as a spike pit)
+         4: Box to push ## TODO:
+        '''
         #Check for "wall", "pit", "cracked wall", "box", ""
-        pass
+        if player_direction == 0:
+            playerlooking_x = player_position[0]
+            playerlooking_y = player_position[1] + 1
+        elif player_direction == 1:
+            playerlooking_x = player_position[0] - 1
+            playerlooking_y = player_position[1]
+        elif player_direction == 1:
+            playerlooking_x = player_position[0]
+            playerlooking_y = player_position[1] - 1
+        elif player_direction == 1:
+            playerlooking_x = player_position[0] + 1
+            playerlooking_y = player_position[1]
+
+        #if obstacle_grid[i][j]:
+            #pass
 
 ###############################################################################
 
