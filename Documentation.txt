@@ -38,3 +38,9 @@ TODO:
 
 	- Some puzzle aspect, but only in quite a light way
 		- Box pushing, lighting torches, a way out of each level??
+
+
+Priority items:
+	- Find way of feathering shadow and desaturating everything a bit
+	- Draw walls and obstacles
+	- Enable obstacle detection

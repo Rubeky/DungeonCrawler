@@ -11,6 +11,20 @@ import random
 class Game:
     walking = [[None]*4 for _ in range(4)]
     tiles = [None]*4
+    '''Obstacle types
+    0 - Nothing
+    1 - Wall1
+    2 - Wall2
+    3 - Wall3
+    4 - Cracked wall
+    5 - Spike pit
+    6 - Vines
+    7 - Tentacle
+    8 - Box
+    9 - Void hole
+    '''
+    obstacles = [0]*10
+    shadow = None
 
 ###############################################################################
 
@@ -38,24 +52,25 @@ class Game:
             self.walking[2][i] = walking[2].subsurface((0 + i*16, 0, 16, 16))
             self.walking[3][i] = pygame.transform.flip(self.walking[1][i], True, False)
 
-        '''self.walking = [\
-        [pygame.image.load('Images/Up1.png'), pygame.image.load('Images/Up2.png'), pygame.image.load('Images/Up3.png'), pygame.image.load('Images/Up4.png')],\
-        [pygame.image.load('Images/Left1.png'), pygame.image.load('Images/Left2.png'), pygame.image.load('Images/Left3.png'), pygame.image.load('Images/Left4.png')],\
-        [pygame.image.load('Images/Down1.png'), pygame.image.load('Images/Down2.png'), pygame.image.load('Images/Down3.png'), pygame.image.load('Images/Down4.png')],\
-        [pygame.image.load('Images/Right1.png'), pygame.image.load('Images/Right2.png'), pygame.image.load('Images/Right3.png'), pygame.image.load('Images/Right4.png')]\
-        ]'''
 
         tile_sheet = pygame.image.load('Images/Tiles.png')
         #TODO: Choose better tiles
-        self.tiles[0] = tile_sheet.subsurface((17 * 17, 17 * 10, 16, 16))
-        self.tiles[1] = tile_sheet.subsurface((17 * 18, 17 * 10, 16, 16))
-        self.tiles[2] = tile_sheet.subsurface((17 * 10, 17 * 11, 16, 16))
-        self.tiles[3] = tile_sheet.subsurface((17 * 10, 17 * 12, 16, 16))
+        self.tiles[0] = tile_sheet.subsurface((17 * 17, 17 * 12, 16, 16))
+        self.tiles[1] = tile_sheet.subsurface((17 * 18, 17 * 12, 16, 16))
+        self.tiles[2] = tile_sheet.subsurface((17 * 17, 17 * 13, 16, 16))
+        self.tiles[3] = tile_sheet.subsurface((17 * 18, 17 * 13, 16, 16))
 
+        self.obstacles[0] = tile_sheet.subsurface((17 * 0, 17 * 2, 16, 16))
+        self.obstacles[1] = tile_sheet.subsurface((17 * 1, 17 * 2, 16, 16))
+        self.obstacles[2] = tile_sheet.subsurface((17 * 2, 17 * 2, 16, 16))
+        self.obstacles[3] = tile_sheet.subsurface((17 * 3, 17 * 2, 16, 16))
+
+        self.shadow = pygame.image.load('Images/Shadow.png')
 
         #Scaling all the tiles and assets loaded in
         for i in range(0,4):
             self.tiles[i] = pygame.transform.scale(self.tiles[i], (64, 64))
+            self.obstacles[i] = pygame.transform.scale(self.obstacles[i], (64, 64))
             for j in range(0,4):
                 self.walking[i][j] = pygame.transform.scale(self.walking[i][j], (64, 64))
 
@@ -65,18 +80,15 @@ class Game:
         obstacle_grid = [["None"]*16 for _ in range(16)]
 
         #Player attributes
-        player_position = [160, 160] #Relative to top corner of board, in "pixels"
+        player_position = [3, 3] #Relative to bottom corner in blocks, 0-indexing
         player_health = 10
         player_direction = -1
         player_score = 0
-        items_list = ""
+        items_list = ["", "", "", ""]
 
         self.generateDungeon(tile_grid, obstacle_grid)
-        self.showScreen(player_position, player_direction, tile_grid, obstacle_grid, screen, player_health, items_list)
-
-        screen.blit(self.walking[2][0], [480, 480])
-
-        pygame.display.update()
+        #Drawing initial frame:
+        self.drawStart(player_position, tile_grid, obstacle_grid, screen)
 
         #Gameloop
         while running:
@@ -119,8 +131,6 @@ class Game:
 
                 gameUpdated = False
 
-            pygame.display.update()
-
         pygame.quit()
 
 
@@ -144,12 +154,32 @@ class Game:
                 randomNumber = random.randint(0,3)
                 tile_grid[i][j] = self.tiles[randomNumber]
 
+                randomNumber = random.randint(0,9)
+                if randomNumber < 4:
+                    obstacle_grid[i][j] = self.obstacles[randomNumber]
+
         #Generate obstacle_grid using premade tile sequences
-        for x in range(0, 4):
+        '''for x in range(0, 4):
             for y in range(0, 4):
                 for i in range(0, 4):
                     for j in range(0, 4):
-                        pass
+                        pass'''
+
+###############################################################################
+
+    '''
+     - drawStart just draws the initial frame of the game, no movement needed
+    '''
+    def drawStart(self, player_position, tile_grid, obstacle_grid, screen):
+
+        screen.fill((0, 0, 0))
+        self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
+        #Character
+        screen.blit(self.walking[2][1], [480, 480])
+        #Shadow
+        screen.blit(self.shadow, [0, 0])
+        #Updates it all
+        pygame.display.update()
 
 ###############################################################################
 
@@ -168,23 +198,28 @@ class Game:
         elif response == 2:
             player_health -= 1
 
-        for i in range(0, 8):
-            pygame.time.delay(120)
+        for i in range(0, 64):
+            pygame.time.delay(3)
             #Background
-            screen.fill((255, 255, 255))
+            screen.fill((0, 0, 0))
 
             if player_direction == 0:
-                player_position[1] += 8
+                player_position[1] += 1/64
             if player_direction == 1:
-                player_position[0] -= 8
+                player_position[0] -= 1/64
             if player_direction == 2:
-                player_position[1] -= 8
+                player_position[1] -= 1/64
             if player_direction == 3:
-                player_position[0] += 8
+                player_position[0] += 1/64
 
             self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
             #Character
-            screen.blit(self.walking[player_direction][i%4], [480, 480])
+            if player_direction == -1:
+                screen.blit(self.walking[2][1], [480, 480])
+            else:
+                screen.blit(self.walking[player_direction][int(i/8)%4], [480, 480])
+            #Shadow
+            screen.blit(self.shadow, [0, 0])
             #UI
             self.drawUI(player_health, items_list)
             #Updates it all
@@ -198,27 +233,13 @@ class Game:
 
     def drawBackground(self, player_position, tile_grid, obstacle_grid, screen):
         #Find where the tiles start relative to the screen
-        tile_pos = [480 - 32 - player_position[0], 480 - player_position[1]]
         for i in range(0, 16):
             for j in range(0, 16):
-                screen.blit(tile_grid[i][j], ((tile_pos[0] + 64*i), ( - tile_pos[1] + 64*j)))
-                if tile_grid[i][j] == "None":
-                    pass
-                elif tile_grid[i][j] == "Tile1":
-                    pass
-                elif tile_grid[i][j] == "Tile2":
-                    pass
-                elif tile_grid[i][j] == "Tile3":
-                    pass
-                elif tile_grid[i][j] == "Tile4":
-                    pass
-                elif tile_grid[i][j] == "RareTile":
-                    pass
-                elif tile_grid[i][j] == "VeryRareTile":
-                    pass
-
-
-                #Draw walls/objects
+                drawing_x = 480 - 64*player_position[0] + 64*i
+                drawing_y = 512 + 64*player_position[1] - 64*j
+                screen.blit(tile_grid[i][j], (drawing_x, drawing_y))
+                if obstacle_grid[i][j] != "None":
+                    screen.blit(obstacle_grid[i][j], (drawing_x, drawing_y))
                 pass
         pass
 

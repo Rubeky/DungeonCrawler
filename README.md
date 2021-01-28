@@ -5,6 +5,8 @@ See Documentation.txt for details on planned features
 
 Credits:
 
+INSPIRATION/CODE:
+
   Good documentation
   https://realpython.com/pygame-a-primer/
 
@@ -13,10 +15,10 @@ Credits:
 
   StackOverflow in general
 
+ASSETS:
+
   Main character assets:
   https://lvlupper.itch.io/16x16-rpg-character-base
 
   Kenney Game Assets for most background stuff
   https://kenney.itch.io/kenney-game-assets-1
-
-  
