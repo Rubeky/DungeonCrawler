@@ -25,7 +25,7 @@ Gameplay rules:
 
 TODO:
 	- Make/Find images for game, all of which are either on a slight angle, or top-down
-		- Player, tiles(5), walls(3), pit trap(2), pots(3), coins(1), enemies(2), circle of vision(2 sizes)
+		- Player, tiles(5), walls(3), pit trap, pots, coins(1), enemies(2), circle of vision(2 sizes)
 
 	- Make/find sounds for the game, all of which are somewhat muffled except the endgame stuff?
 	 	- Walking, ambient noises (muffled thudding, crumbling sounds, landslides?), sword swiping,
@@ -34,13 +34,10 @@ TODO:
 	- Come up with some aspect of mythology for future?
 		- Maybe lovecraftian-esque story?
 
-	- Level segment design, and how to load that into the game
-
 	- Some puzzle aspect, but only in quite a light way
 		- Box pushing, lighting torches, a way out of each level??
 
-
 Priority items:
-	- Find way of feathering shadow and desaturating everything a bit
+	- Find way desaturating everything a bit
 	- Draw walls and obstacles
 	- Enable obstacle detection
