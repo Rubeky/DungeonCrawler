@@ -12,6 +12,7 @@ import csv
 class Game:
     walking = [[None]*4 for _ in range(4)]
     tiles = [None]*4
+    black_heart = None
     '''
     0 - Nothing
     1 - Wall1
@@ -26,7 +27,7 @@ class Game:
     '''
     obstacles = [0]*10
     obstacle_types = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    shadow = None 
+    shadow = None
 
 ###############################################################################
 
@@ -42,7 +43,7 @@ class Game:
         pygame.display.set_caption("Dungeon Crawler")
         screen.fill((255, 255, 255))
 
-        self.setupVariables()
+        self.loadImages()
 
         #Game-state variables
         running = True
@@ -58,11 +59,13 @@ class Game:
         player_health = 10
         player_direction = -1
         player_score = 0
-        items_list = ["", "", "", ""]
+        unlocked_items = [True, False, False, False]
+        selected_item = 0
 
         self.generateDungeon(tile_grid, obstacle_grid, obstacle_type)
         #Drawing initial frame:
         self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen)
+        pygame.display.update()
 
         #Gameloop
         while running:
@@ -91,14 +94,18 @@ class Game:
                         gameUpdated = True
 
                     if event.key == pygame.K_SPACE:
-                        obstacle_grid = self.breakBlock(player_position, player_direction, obstacle_grid, obstacle_type)
-                        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen)
+                        if selected_item == 0:
+                            obstacle_grid = self.breakBlock(player_position, player_direction, obstacle_grid, obstacle_type)
+                            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen)
+                            self.drawUI(screen, player_health, unlocked_items)
+                            pygame.display.update()
 
                     if event.key == pygame.K_ESCAPE:
                         running = False
 
             if gameUpdated:
 
+                #Checking that there are no walls infront of the player
                 can_move = self.playerMovementCheck(player_position, player_direction, obstacle_type)
                 if can_move == 3:
                     self.deathMessage()
@@ -121,12 +128,14 @@ class Game:
                         #Shadow
                         screen.blit(self.shadow, [0, 0])
                         #UI
-                        self.drawUI(player_health, items_list)
+                        self.drawUI(screen, player_health, unlocked_items)
                         #Updates it all
                         pygame.display.update()
-                else:
+                else:  #Change which way they're facing
                     self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen)
-
+                    #UI
+                    self.drawUI(screen, player_health, unlocked_items)
+                    pygame.display.update()
 
                 gameUpdated = False
 
@@ -134,7 +143,8 @@ class Game:
 
 ###############################################################################
 
-    def setupVariables(self):
+    '''loads in all images required for the game'''
+    def loadImages(self):
         walking = [None]*4
         walking[0] = pygame.image.load('Images/Up.png')
         walking[1] = pygame.image.load('Images/Left.png')
@@ -161,6 +171,8 @@ class Game:
         self.obstacles[4] = tile_sheet.subsurface((17 * 9, 17 * 3, 16, 16))
 
         self.shadow = pygame.image.load('Images/Shadow.png')
+        self.black_heart = pygame.image.load('Images/Black Heart.png')
+        self.black_heart = pygame.transform.scale(self.black_heart, (64, 64))
 
         #Scaling all the tiles and assets loaded in
         for i in range(0,4):
@@ -173,10 +185,11 @@ class Game:
 
 ###############################################################################
 
+    '''Randomly generates dungeon tiles and obstacles'''
     def generateDungeon(self, tile_grid, obstacle_grid, obstacle_type):
         '''
         generateDungeon(self, tile_grid, obstacle_grid, obstacle_type)
-         - floor tile array - - ^
+         - floor tile array - - - ^
          - obstacles in dungeon - - - - - - - ^
          - obstacle types stored for collision - - - - - - - ^
 
@@ -206,9 +219,15 @@ class Game:
 
 ###############################################################################
 
+    '''drawStill just draws a still frame of the game, no movement included'''
     def drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen):
         '''
-        drawStill just draws a still frame of the game, no movement included
+        drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen)
+         - position of the player ^
+         - which way the player is facing - - - ^
+         - the floor grid to draw in - - - - - - - - - - - - - ^
+         - the obstacle grid to draw in - - - - - - - - - - - - - - - - - - ^
+         - the screen to draw onto - - - - - - - - - - - - - - - - - - - - - - - - - - ^
         '''
 
         screen.fill((0, 0, 0))
@@ -217,18 +236,16 @@ class Game:
         screen.blit(self.walking[player_direction][1], [480, 480])
         #Shadow
         screen.blit(self.shadow, [0, 0])
-        #Updates it all
-        pygame.display.update()
 
 ###############################################################################
 
+    '''This function draws the walking animation between blocks'''
     def moveCharacter(self, player_position, player_direction, screen):
         '''
-        drawMovement(self, player_position, player_direction)
+        moveCharacter(self, player_position, player_direction, screen)
          - player coordinates - ^
          - which direction is intended - - - - - ^
-
-         - This function draws the walking animation between blocks
+         - screen to draw on - - - - - - - - - - - - - - - - - - ^
         '''
 
         if player_direction == 0:
@@ -244,6 +261,7 @@ class Game:
 
 ###############################################################################
 
+    '''Draws the background of the game'''
     def drawBackground(self, player_position, tile_grid, obstacle_grid, screen):
         #Find where the tiles start relative to the screen
         for i in range(0, 16):
@@ -259,15 +277,34 @@ class Game:
 
 ###############################################################################
 
-    def drawUI(self, player_health, items_list):
+    '''Draws the UI of the game'''
+    def drawUI(self, screen, player_health, unlocked_items):
+        '''
+        drawUI(self, screen, player_health, unlocked_items)
+        - drawing item ^
+        - player health - - - - - ^
+        - array of unlocked items to draw - - - - ^
+        '''
         #Draw healthbar, check if empty, if yes, self.deathMessage()
-        #Draw Taskbar image
-        #Draw items in "Taskbar"
+        if player_health <= 0:
+            self.deathMessage("Lost too much health!", random.randint(0,1000))
+        else:
+            pygame.draw.rect(screen, "#000000", (924, 50, 50, 300), 10)
+            pygame.draw.rect(screen, "#111111", (924, 50, 50, player_health*30))
+            #Draw grey heart underneath the rectangle
+            screen.blit(self.black_heart, (916, 350))
+        #Draw items in "Taskbar", no taskbar image is needed
         pass
 
 ###############################################################################
 
+    '''Simply returns the id of the block in front of the player'''
     def blockInFront(self, player_position, player_direction):
+        '''
+        blockInFront(self, player_position, player_direction)
+         - position of the player ^
+         - direction that the player is facing - ^
+        '''
 
         if player_direction == 0:
             playerlooking_x = player_position[0]
@@ -288,6 +325,7 @@ class Game:
 
 ###############################################################################
 
+    '''Returns what should be done if the player walks forward'''
     def playerMovementCheck(self, player_position, player_direction, obstacle_type):
         '''
         playerMovementCheck(self, player_position, player_direction, obstacle_type)
@@ -329,9 +367,9 @@ class Game:
         elif obstacle_type[playerlooking_x][playerlooking_y] == 9:
             return 2
 
-
 ###############################################################################
 
+    '''Breaks the block infront of the player if it is cracked'''
     def breakBlock(self, player_position, player_direction, obstacle_grid, obstacle_type):
         '''
         breakBlock(self, player_position, player_direction, obstacle_grid, obstacle_type)
@@ -350,6 +388,7 @@ class Game:
 
 ###############################################################################
 
+    '''Creates a deathmessage page'''
     def deathMessage(self, death_type, player_score):
         #Draw respawn/quit screen
         #Buttons to respawn or quit
@@ -359,4 +398,5 @@ class Game:
 ###############################################################################
 ###############################################################################
 
+'''Spawning in the game'''
 game = Game()
