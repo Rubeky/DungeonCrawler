@@ -22,3 +22,20 @@ ASSETS:
 
   Kenney Game Assets for most background stuff
   https://kenney.itch.io/kenney-game-assets-1
+
+SOUNDS:
+
+  Rumble1:
+  https://freesound.org/people/Fission9/sounds/460459/
+
+  Rumble2:
+  https://freesound.org/people/AaronGNP/sounds/54614/
+
+  Creaking1:
+  https://freesound.org/people/Kostas17/sounds/529620/
+
+  Hit1:
+  https://freesound.org/people/qubodup/sounds/222517/
+
+  Earthquake1:
+  https://freesound.org/people/uagadugu/sounds/222521/

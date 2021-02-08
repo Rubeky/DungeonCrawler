@@ -27,7 +27,7 @@ class Game:
     '''
     obstacles = [0]*10
     obstacle_types = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    shadow = None
+    shadow = [None]*2
 
 ###############################################################################
 
@@ -55,21 +55,35 @@ class Game:
         obstacle_type = [["None"]*16 for _ in range(16)]
 
         #Player attributes
-        player_position = [2, 2] #Relative to bottom corner in blocks, 0-indexing
-        player_health = 10
-        player_direction = -1
-        player_score = 0
+        player_position = [2, 2]    #Relative to bottom corner in blocks, 0-indexing
+        player_health = 10          #If it gets to 0, player dies
+        player_direction = 2       #Decided with keys, WASD are 0,1,2,3 respectively
+        player_score = 0            #Increased by ????? ### TODO:
+
+        #Items list is:
+        #0 - Pickaxe
+        #1 - Sword
+        #2 - Staff
+        #3 - Torch
         unlocked_items = [True, False, False, False]
         selected_item = 0
 
+        alphaSurface = pygame.Surface((1024,1024))
+        alphaSurface.fill((99, 84, 68))
+        alphaSurface.set_alpha(100)
+
+        #Initialising randomised dungeon
         self.generateDungeon(tile_grid, obstacle_grid, obstacle_type)
+        #Fade in
+        self.fadeIn(player_position, player_direction, tile_grid, obstacle_grid, screen)
         #Drawing initial frame:
-        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen)
+        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
         pygame.display.update()
 
         #Gameloop
         while running:
 
+            #Delay
             pygame.time.delay(50)
             #Checking for events
             for event in pygame.event.get():
@@ -96,13 +110,14 @@ class Game:
                     if event.key == pygame.K_SPACE:
                         if selected_item == 0:
                             obstacle_grid = self.breakBlock(player_position, player_direction, obstacle_grid, obstacle_type)
-                            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen)
+                            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
                             self.drawUI(screen, player_health, unlocked_items)
                             pygame.display.update()
 
                     if event.key == pygame.K_ESCAPE:
                         running = False
 
+            #If game needs to be rerendered due to player movement, this section is used
             if gameUpdated:
 
                 #Checking that there are no walls infront of the player
@@ -125,14 +140,19 @@ class Game:
                         self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
                         #Character
                         screen.blit(self.walking[player_direction][int(i/8)%4], [480, 480])
+                        #The shade
+                        screen.blit(alphaSurface,(0,0))
                         #Shadow
-                        screen.blit(self.shadow, [0, 0])
+                        if unlocked_items[2] and selected_item == 2:
+                            screen.blit(self.shadow[1], [0, 0])
+                        else:
+                            screen.blit(self.shadow[0], [0, 0])
                         #UI
                         self.drawUI(screen, player_health, unlocked_items)
                         #Updates it all
                         pygame.display.update()
                 else:  #Change which way they're facing
-                    self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen)
+                    self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
                     #UI
                     self.drawUI(screen, player_health, unlocked_items)
                     pygame.display.update()
@@ -170,7 +190,8 @@ class Game:
         self.obstacles[3] = tile_sheet.subsurface((17 * 3, 17 * 5, 16, 16))
         self.obstacles[4] = tile_sheet.subsurface((17 * 9, 17 * 3, 16, 16))
 
-        self.shadow = pygame.image.load('Images/Shadow.png')
+        self.shadow[0] = pygame.image.load('Images/ShadowSmall.png')
+        self.shadow[1] = pygame.image.load('Images/ShadowLarge.png')
         self.black_heart = pygame.image.load('Images/Black Heart.png')
         self.black_heart = pygame.transform.scale(self.black_heart, (64, 64))
 
@@ -219,23 +240,63 @@ class Game:
 
 ###############################################################################
 
-    '''drawStill just draws a still frame of the game, no movement included'''
-    def drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen):
+    '''Draws the fade-in sequence'''
+    def fadeIn(self, player_position, player_direction, tile_grid, obstacle_grid, screen):
         '''
-        drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen)
+        fadeIn(self, player_position, player_direction, tile_grid, obstacle_grid, screen)
+         - player coords - ^
+         - direction the player is facing - ^
+         - grid of world tiles - - - - - - - - - - - - - - - ^
+         - obstacle items stored for collision - - - - - - - - - - - - - ^
+         - screen to draw on - - - - - - - - - - - - - - - - - - - - - - - - - - - - ^
+
+
+        '''
+        #This is taken from https://gamedev.stackexchange.com/questions/75572/fade-in-screen-in-pygame
+        alphaSurface = pygame.Surface((1024,1024)) # The custom-surface of the size of the screen.
+        alphaSurface.fill((0,0,0)) # Fill it with whole white before the main-loop.
+        alphaSurface.set_alpha(255) # Set alpha to 0 before the main-loop.
+        alph = 255 # The increment-variable.
+
+        for i in range(0,255):
+            pygame.time.delay(1)
+            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, [False, False, False], 0)
+            alph -= 1 # Increment alpha by a really small value (To make it slower, try 0.01)
+            alphaSurface.set_alpha(alph) # Set the incremented alpha-value to the custom surface.
+            screen.blit(alphaSurface,(0,0)) # Blit it to the screen-surface (Make them separate)
+            pygame.display.update()
+
+
+###############################################################################
+
+    '''drawStill just draws a still frame of the game, no movement included'''
+    def drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item):
+        '''
+        drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
          - position of the player ^
          - which way the player is facing - - - ^
          - the floor grid to draw in - - - - - - - - - - - - - ^
          - the obstacle grid to draw in - - - - - - - - - - - - - - - - - - ^
          - the screen to draw onto - - - - - - - - - - - - - - - - - - - - - - - - - - ^
+         - which items are unlocked - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ^
+         - which item is selected - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ^
         '''
+        alphaSurface = pygame.Surface((1024,1024))
+        alphaSurface.fill((99, 84, 68))
+        alphaSurface.set_alpha(100)
 
         screen.fill((0, 0, 0))
         self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
         #Character
         screen.blit(self.walking[player_direction][1], [480, 480])
+        #The shade
+        screen.blit(alphaSurface,(0,0))
         #Shadow
-        screen.blit(self.shadow, [0, 0])
+        if unlocked_items[2] and selected_item == 2:
+            screen.blit(self.shadow[1], [0, 0])
+        else:
+            screen.blit(self.shadow[0], [0, 0])
+
 
 ###############################################################################
 
