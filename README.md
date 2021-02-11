@@ -21,7 +21,7 @@ ASSETS:
   https://lvlupper.itch.io/16x16-rpg-character-base
 
   Kenney Game Assets for most background stuff
-  https://kenney.itch.io/kenney-game-assets-1
+  https://www.kenney.nl
 
 SOUNDS:
 
@@ -39,3 +39,8 @@ SOUNDS:
 
   Earthquake1:
   https://freesound.org/people/uagadugu/sounds/222521/
+
+FONTS:
+
+  Blackchancery
+  https://www.1001fonts.com/blackchancery-font.html

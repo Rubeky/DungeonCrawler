@@ -3,6 +3,7 @@
 
 #Initialising pygame library
 import pygame
+import pygame.freetype
 import random
 import csv
 
@@ -13,6 +14,7 @@ class Game:
     walking = [[None]*4 for _ in range(4)]
     tiles = [None]*4
     black_heart = None
+    tool_icons = [None]*4
     '''
     0 - Nothing
     1 - Wall1
@@ -63,11 +65,11 @@ class Game:
         #Items list is:
         #0 - Pickaxe
         #1 - Sword
-        #2 - Staff
-        #3 - Torch
-        unlocked_items = [True, False, False, False]
+        #2 - Torch
+        unlocked_items = [True, True, True, True]
         selected_item = 0
 
+        #Transparent surface
         alphaSurface = pygame.Surface((1024,1024))
         alphaSurface.fill((99, 84, 68))
         alphaSurface.set_alpha(100)
@@ -77,7 +79,7 @@ class Game:
         #Fade in
         self.fadeIn(player_position, player_direction, tile_grid, obstacle_grid, screen)
         #Drawing initial frame:
-        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
+        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
         pygame.display.update()
 
         #Gameloop
@@ -94,6 +96,8 @@ class Game:
                 #Movement from WASD, checks from last event and uses that
                 #Should implement a stack so you can do multiple moves
                 if event.type == pygame.KEYDOWN:
+
+                    #Character movements
                     if event.key == pygame.K_w:
                         player_direction = 0
                         gameUpdated = True
@@ -107,12 +111,30 @@ class Game:
                         player_direction = 3
                         gameUpdated = True
 
+                    #Item selection
+                    if event.key == pygame.K_1 and unlocked_items[0] == True:
+                        selected_item = 0
+                        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                        self.drawUI(screen, player_health, unlocked_items, selected_item)
+                    if event.key == pygame.K_2 and unlocked_items[1] == True:
+                        selected_item = 1
+                        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                        self.drawUI(screen, player_health, unlocked_items, selected_item)
+                    if event.key == pygame.K_3 and unlocked_items[2] == True:
+                        selected_item = 2
+                        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                        self.drawUI(screen, player_health, unlocked_items, selected_item)
+                    if event.key == pygame.K_4 and unlocked_items[3] == True:
+                        selected_item = 3
+                        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                        self.drawUI(screen, player_health, unlocked_items, selected_item)
+
+                    #Exiting the game
                     if event.key == pygame.K_SPACE:
                         if selected_item == 0:
                             obstacle_grid = self.breakBlock(player_position, player_direction, obstacle_grid, obstacle_type)
-                            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
-                            self.drawUI(screen, player_health, unlocked_items)
-                            pygame.display.update()
+                            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                            self.drawUI(screen, player_health, unlocked_items, selected_item)
 
                     if event.key == pygame.K_ESCAPE:
                         running = False
@@ -122,10 +144,24 @@ class Game:
 
                 #Checking that there are no walls infront of the player
                 can_move = self.playerMovementCheck(player_position, player_direction, obstacle_type)
+
+                # Death screen
                 if can_move == 3:
-                    self.deathMessage()
+                    dead = True
+                    death_font = pygame.freetype.Font("Fonts/BLKCHCRY.ttf", 24)
+                    text_screen_1 = pygame.display.set_mode((400, 300))
+                    while dead:
+                        exit()
+
                 elif can_move == 2:
                     player_health -= 1
+                    if player_health < 1:
+                        dead = True
+                        death_font = pygame.freetype.Font("Fonts/BLKCHCRY.ttf", 24)
+                        text_screen_1 = pygame.display.set_mode((400, 300))
+                        while dead:
+                            exit()
+
 
                 #Moves character
                 if can_move != 0:   #If character can actually move
@@ -143,18 +179,18 @@ class Game:
                         #The shade
                         screen.blit(alphaSurface,(0,0))
                         #Shadow
-                        if unlocked_items[2] and selected_item == 2:
+                        if selected_item == 3:
                             screen.blit(self.shadow[1], [0, 0])
                         else:
                             screen.blit(self.shadow[0], [0, 0])
                         #UI
-                        self.drawUI(screen, player_health, unlocked_items)
+                        self.drawUI(screen, player_health, unlocked_items, selected_item)
                         #Updates it all
                         pygame.display.update()
                 else:  #Change which way they're facing
-                    self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
+                    self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
                     #UI
-                    self.drawUI(screen, player_health, unlocked_items)
+                    self.drawUI(screen, player_health, unlocked_items, selected_item)
                     pygame.display.update()
 
                 gameUpdated = False
@@ -189,20 +225,29 @@ class Game:
         self.obstacles[2] = tile_sheet.subsurface((17 * 2, 17 * 5, 16, 16))
         self.obstacles[3] = tile_sheet.subsurface((17 * 3, 17 * 5, 16, 16))
         self.obstacles[4] = tile_sheet.subsurface((17 * 9, 17 * 3, 16, 16))
+        self.obstacles[5] = tile_sheet.subsurface((17 * 12, 17 * 3, 16, 16))
 
         self.shadow[0] = pygame.image.load('Images/ShadowSmall.png')
         self.shadow[1] = pygame.image.load('Images/ShadowLarge.png')
         self.black_heart = pygame.image.load('Images/Black Heart.png')
         self.black_heart = pygame.transform.scale(self.black_heart, (64, 64))
 
+        self.tool_icons[0] = pygame.image.load('Images/Pickaxe.png')
+        self.tool_icons[1] = pygame.image.load('Images/Sword.png')
+        self.tool_icons[2] = pygame.image.load('Images/Staff.png')
+        self.tool_icons[3] = pygame.image.load('Images/Torch.png')
+
         #Scaling all the tiles and assets loaded in
         for i in range(0,4):
             self.tiles[i] = pygame.transform.scale(self.tiles[i], (64, 64))
+            self.tool_icons[i] = pygame.transform.scale(self.tool_icons[i], (64, 64))
             for j in range(0,4):
                 self.walking[i][j] = pygame.transform.scale(self.walking[i][j], (64, 64))
 
         for i in range(0, 5):
             self.obstacles[i] = pygame.transform.scale(self.obstacles[i], (64, 64))
+
+        self.obstacles[5] = pygame.transform.scale(self.obstacles[5], (64, 64))
 
 ###############################################################################
 
@@ -260,7 +305,7 @@ class Game:
 
         for i in range(0,255):
             pygame.time.delay(1)
-            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, [False, False, False], 0)
+            self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, 0)
             alph -= 1 # Increment alpha by a really small value (To make it slower, try 0.01)
             alphaSurface.set_alpha(alph) # Set the incremented alpha-value to the custom surface.
             screen.blit(alphaSurface,(0,0)) # Blit it to the screen-surface (Make them separate)
@@ -270,16 +315,15 @@ class Game:
 ###############################################################################
 
     '''drawStill just draws a still frame of the game, no movement included'''
-    def drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item):
+    def drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item):
         '''
-        drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen, unlocked_items, selected_item)
+        drawStill(self, player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
          - position of the player ^
          - which way the player is facing - - - ^
          - the floor grid to draw in - - - - - - - - - - - - - ^
          - the obstacle grid to draw in - - - - - - - - - - - - - - - - - - ^
          - the screen to draw onto - - - - - - - - - - - - - - - - - - - - - - - - - - ^
-         - which items are unlocked - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ^
-         - which item is selected - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ^
+         - which item is selected - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ^
         '''
         alphaSurface = pygame.Surface((1024,1024))
         alphaSurface.fill((99, 84, 68))
@@ -292,7 +336,7 @@ class Game:
         #The shade
         screen.blit(alphaSurface,(0,0))
         #Shadow
-        if unlocked_items[2] and selected_item == 2:
+        if selected_item == 3:
             screen.blit(self.shadow[1], [0, 0])
         else:
             screen.blit(self.shadow[0], [0, 0])
@@ -339,23 +383,27 @@ class Game:
 ###############################################################################
 
     '''Draws the UI of the game'''
-    def drawUI(self, screen, player_health, unlocked_items):
+    def drawUI(self, screen, player_health, unlocked_items, selected_item):
         '''
-        drawUI(self, screen, player_health, unlocked_items)
+        drawUI(self, screen, player_health, unlocked_items, selected_item)
         - drawing item ^
         - player health - - - - - ^
         - array of unlocked items to draw - - - - ^
+        - which item is currently being held - - - - - - - - - - ^
         '''
-        #Draw healthbar, check if empty, if yes, self.deathMessage()
-        if player_health <= 0:
-            self.deathMessage("Lost too much health!", random.randint(0,1000))
-        else:
-            pygame.draw.rect(screen, "#000000", (924, 50, 50, 300), 10)
-            pygame.draw.rect(screen, "#111111", (924, 50, 50, player_health*30))
-            #Draw grey heart underneath the rectangle
-            screen.blit(self.black_heart, (916, 350))
+        pygame.draw.rect(screen, "#000000", (924, 50, 50, 300), 10)
+        pygame.draw.rect(screen, "#111111", (924, 50, 50, player_health*30))
+        #Draw grey heart underneath the rectangle
+        screen.blit(self.black_heart, (916, 350))
+
+        pygame.draw.rect(screen, "#111111", (98 + 88*selected_item, 798, 68, 68), 5)
         #Draw items in "Taskbar", no taskbar image is needed
-        pass
+        for i in range(0,4):
+            if unlocked_items[i]:
+                screen.blit(self.tool_icons[i], (100 + 88*i, 800))
+
+        pygame.display.update()
+
 
 ###############################################################################
 
@@ -446,15 +494,6 @@ class Game:
             obstacle_type[playerlooking_x][playerlooking_y] = 0
 
         return obstacle_grid
-
-###############################################################################
-
-    '''Creates a deathmessage page'''
-    def deathMessage(self, death_type, player_score):
-        #Draw respawn/quit screen
-        #Buttons to respawn or quit
-        #Text for "YOU DIED" and "score = x"
-        pass
 
 ###############################################################################
 ###############################################################################

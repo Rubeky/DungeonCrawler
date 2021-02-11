@@ -44,3 +44,6 @@ Current List:
  - Implement some sounds (as trial)
  - Create points system
  - Death message
+ - Level design
+ - Secrets
+ - Usage for staff and sword
