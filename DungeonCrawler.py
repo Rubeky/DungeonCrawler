@@ -41,7 +41,7 @@ class Game:
     def main(self):
 
         pygame.init()
-        screen = pygame.display.set_mode([1024, 1024])
+        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         pygame.display.set_caption("Dungeon Crawler")
         screen.fill((255, 255, 255))
 
@@ -61,16 +61,18 @@ class Game:
         player_health = 10          #If it gets to 0, player dies
         player_direction = 2       #Decided with keys, WASD are 0,1,2,3 respectively
         player_score = 0            #Increased by ????? ### TODO:
+        currentLife = 0
 
         #Items list is:
         #0 - Pickaxe
         #1 - Sword
         #2 - Torch
-        unlocked_items = [True, True, True, True]
+        #3 - Staff
+        unlocked_items = [True, True, False, True]
         selected_item = 0
 
         #Transparent surface
-        alphaSurface = pygame.Surface((1024,1024))
+        alphaSurface = pygame.Surface((1920,1080))
         alphaSurface.fill((99, 84, 68))
         alphaSurface.set_alpha(100)
 
@@ -147,24 +149,26 @@ class Game:
 
                 # Death screen
                 if can_move == 3:
-                    dead = True
-                    death_font = pygame.freetype.Font("Fonts/BLKCHCRY.ttf", 24)
-                    text_screen_1 = pygame.display.set_mode((400, 300))
-                    while dead:
-                        exit()
+                    self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                    running = self.deathscreen(screen)
+                    currentLife += 1
+
+                    self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                    self.drawUI(screen, player_health, unlocked_items, selected_item)
 
                 elif can_move == 2:
                     player_health -= 1
                     if player_health < 1:
-                        dead = True
-                        death_font = pygame.freetype.Font("Fonts/BLKCHCRY.ttf", 24)
-                        text_screen_1 = pygame.display.set_mode((400, 300))
-                        while dead:
-                            exit()
+                        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                        running = self.deathscreen(screen)
+                        currentLife += 1
+
+                        self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
+                        self.drawUI(screen, player_health, unlocked_items, selected_item)
 
 
                 #Moves character
-                if can_move != 0:   #If character can actually move
+                elif can_move != 0:   #If character can actually move
                     for i in range(0, 64):
 
                         pygame.time.delay(3)
@@ -175,14 +179,17 @@ class Game:
 
                         self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
                         #Character
-                        screen.blit(self.walking[player_direction][int(i/8)%4], [480, 480])
+                        screen.blit(self.walking[player_direction][int(i/8)%4], [960, 480])
                         #The shade
                         screen.blit(alphaSurface,(0,0))
+                        pygame.draw.rect(screen,"#000000",[1024, 1024,140,40])
                         #Shadow
                         if selected_item == 3:
                             screen.blit(self.shadow[1], [0, 0])
+                            pass
                         else:
                             screen.blit(self.shadow[0], [0, 0])
+                            pass
                         #UI
                         self.drawUI(screen, player_health, unlocked_items, selected_item)
                         #Updates it all
@@ -298,15 +305,15 @@ class Game:
 
         '''
         #This is taken from https://gamedev.stackexchange.com/questions/75572/fade-in-screen-in-pygame
-        alphaSurface = pygame.Surface((1024,1024)) # The custom-surface of the size of the screen.
+        alphaSurface = pygame.Surface((1920,1080)) # The custom-surface of the size of the screen.
         alphaSurface.fill((0,0,0)) # Fill it with whole white before the main-loop.
         alphaSurface.set_alpha(255) # Set alpha to 0 before the main-loop.
         alph = 255 # The increment-variable.
 
-        for i in range(0,255):
+        for i in range(0,128):
             pygame.time.delay(1)
             self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, 0)
-            alph -= 1 # Increment alpha by a really small value (To make it slower, try 0.01)
+            alph -= 2 # Increment alpha by a really small value (To make it slower, try 0.01)
             alphaSurface.set_alpha(alph) # Set the incremented alpha-value to the custom surface.
             screen.blit(alphaSurface,(0,0)) # Blit it to the screen-surface (Make them separate)
             pygame.display.update()
@@ -325,14 +332,14 @@ class Game:
          - the screen to draw onto - - - - - - - - - - - - - - - - - - - - - - - - - - ^
          - which item is selected - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ^
         '''
-        alphaSurface = pygame.Surface((1024,1024))
+        alphaSurface = pygame.Surface((1920,1080))
         alphaSurface.fill((99, 84, 68))
         alphaSurface.set_alpha(100)
 
         screen.fill((0, 0, 0))
         self.drawBackground(player_position, tile_grid, obstacle_grid, screen)
         #Character
-        screen.blit(self.walking[player_direction][1], [480, 480])
+        screen.blit(self.walking[player_direction][1], [960, 480])
         #The shade
         screen.blit(alphaSurface,(0,0))
         #Shadow
@@ -371,7 +378,7 @@ class Game:
         #Find where the tiles start relative to the screen
         for i in range(0, 16):
             for j in range(0, 16):
-                drawing_x = 480 - 64*player_position[0] + 64*i
+                drawing_x = 960 - 64*player_position[0] + 64*i
                 drawing_y = 512 + 64*player_position[1] - 64*j
                 if tile_grid[i][j] != None:
                     screen.blit(tile_grid[i][j], (drawing_x, drawing_y))
@@ -391,19 +398,18 @@ class Game:
         - array of unlocked items to draw - - - - ^
         - which item is currently being held - - - - - - - - - - ^
         '''
-        pygame.draw.rect(screen, "#000000", (924, 50, 50, 300), 10)
-        pygame.draw.rect(screen, "#111111", (924, 50, 50, player_health*30))
+        pygame.draw.rect(screen, "#000000", (1800, 50, 50, 300), 10)
+        pygame.draw.rect(screen, "#111111", (1800, 50, 50, player_health*30))
         #Draw grey heart underneath the rectangle
-        screen.blit(self.black_heart, (916, 350))
+        screen.blit(self.black_heart, (1792, 350))
 
-        pygame.draw.rect(screen, "#111111", (98 + 88*selected_item, 798, 68, 68), 5)
+        pygame.draw.rect(screen, "#111111", (812 + 88*selected_item, 798, 68, 68), 5)
         #Draw items in "Taskbar", no taskbar image is needed
         for i in range(0,4):
             if unlocked_items[i]:
-                screen.blit(self.tool_icons[i], (100 + 88*i, 800))
+                screen.blit(self.tool_icons[i], (814 + 88*i, 800))
 
         pygame.display.update()
-
 
 ###############################################################################
 
@@ -494,6 +500,38 @@ class Game:
             obstacle_type[playerlooking_x][playerlooking_y] = 0
 
         return obstacle_grid
+
+###############################################################################
+
+    '''Shows deathscreen overlay'''
+    def deathscreen(self, screen):
+        dead = True
+        death_font = pygame.font.Font("Fonts/Simvoni-Bold.otf", 70)
+        text = death_font.render("You have died", True, "#300010")
+        textRect = text.get_rect()
+        textRect.center = (512, 512)
+
+        #Deathscreen
+
+        screen.blit(text, textRect)
+        pygame.display.update()
+
+        while dead:
+            pygame.time.delay(50)
+
+            #Draw the deathscreen with buttons and all
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONUP:
+                    x, y = event.pos
+                    #FIND BUTTON LOCATION
+                    if x < 100 and x > 0:
+                       if y < 100 and y > 0:
+                           dead = False
+                           return True
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        dead = False
+                        return False
 
 ###############################################################################
 ###############################################################################
