@@ -52,7 +52,7 @@ class Game:
         gameUpdated = False
 
         #Board attributes
-        tile_grid = [["None"]*16 for _ in range(16)]
+        tile_grid = pygame.Surface((64*16, 64*16)) #[["None"]*16 for _ in range(16)]
         obstacle_grid = [["None"]*16 for _ in range(16)]
         obstacle_type = [["None"]*16 for _ in range(16)]
 
@@ -171,7 +171,7 @@ class Game:
                 elif can_move != 0:   #If character can actually move
                     for i in range(0, 64):
 
-                        pygame.time.delay(3)
+                        #pygame.time.delay(1)
                         #Background
                         screen.fill((0, 0, 0))
 
@@ -192,13 +192,11 @@ class Game:
                             pass
                         #UI
                         self.drawUI(screen, player_health, unlocked_items, selected_item)
-                        #Updates it all
-                        pygame.display.update()
+
                 else:  #Change which way they're facing
                     self.drawStill(player_position, player_direction, tile_grid, obstacle_grid, screen, selected_item)
                     #UI
                     self.drawUI(screen, player_health, unlocked_items, selected_item)
-                    pygame.display.update()
 
                 gameUpdated = False
 
@@ -278,7 +276,8 @@ class Game:
         for i in range(0, 16):
             for j in range(0, 16):
                 randomNumber = random.randint(0,3)
-                tile_grid[i][j] = self.tiles[randomNumber]
+                #tile_grid[i][j] = self.tiles[randomNumber]
+                tile_grid.blit(self.tiles[randomNumber], (64*i, 64*j))
 
         #Generate obstacle_grid using premade tile sequences
         data = list(csv.reader(open("World chunks/Basic.csv")))
@@ -375,17 +374,16 @@ class Game:
 
     '''Draws the background of the game'''
     def drawBackground(self, player_position, tile_grid, obstacle_grid, screen):
+        drawing_x = 960 - 64*player_position[0]
+        drawing_y = 512 + 64*player_position[1] - 64*15
+        screen.blit(tile_grid, (drawing_x, drawing_y))
         #Find where the tiles start relative to the screen
         for i in range(0, 16):
             for j in range(0, 16):
                 drawing_x = 960 - 64*player_position[0] + 64*i
                 drawing_y = 512 + 64*player_position[1] - 64*j
-                if tile_grid[i][j] != None:
-                    screen.blit(tile_grid[i][j], (drawing_x, drawing_y))
                 if obstacle_grid[i][j] != "None":
                     screen.blit(obstacle_grid[i][j], (drawing_x, drawing_y))
-                pass
-        pass
 
 ###############################################################################
 
